@@ -1,0 +1,158 @@
+# =========================
+
+# Python
+
+# =========================
+
+**pycache**/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environments
+
+.venv/
+venv/
+env/
+ENV/
+
+# =========================
+
+# Environment Variables
+
+# =========================
+
+.env
+.env.*
+!.env.example
+
+# =========================
+
+# Jupyter Notebooks
+
+# =========================
+
+.ipynb_checkpoints/
+
+# =========================
+
+# Data Files
+
+# =========================
+
+data/raw/*
+data/processed/*
+data/external/*
+
+# Keep folder structure
+
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/external/.gitkeep
+
+# =========================
+
+# Databases
+
+# =========================
+
+*.db
+*.sqlite
+*.sqlite3
+
+# =========================
+
+# Machine Learning Models
+
+# =========================
+
+models/saved_models/*
+*.pkl
+*.joblib
+*.h5
+*.onnx
+
+# =========================
+
+# Logs
+
+# =========================
+
+logs/
+*.log
+
+# =========================
+
+# Airflow
+
+# =========================
+
+airflow/logs/
+airflow/airflow.db
+airflow/webserver_config.py
+
+# =========================
+
+# Streamlit
+
+# =========================
+
+.streamlit/secrets.toml
+
+# =========================
+
+# IDEs
+
+# =========================
+
+.vscode/
+.idea/
+
+# =========================
+
+# OS Files
+
+# =========================
+
+.DS_Store
+Thumbs.db
+*:Zone.Identifier
+
+# =========================
+
+# Pytest
+
+# =========================
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+# =========================
+
+# Build / Distribution
+
+# =========================
+
+build/
+dist/
+*.egg-info/
+
+# =========================
+
+# Docker
+
+# =========================
+
+docker-data/
+*.tar
+
+# =========================
+
+# Temporary Files
+
+# =========================
+
+tmp/
+temp/
+*.tmp

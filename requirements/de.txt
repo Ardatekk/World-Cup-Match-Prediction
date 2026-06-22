@@ -1,0 +1,7 @@
+requests
+beautifulsoup4
+lxml
+
+schedule
+
+psycopg2-binary

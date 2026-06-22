@@ -1,0 +1,2 @@
+-- Work in Progress
+-- Database schema will be defined during the data engineering phase.
