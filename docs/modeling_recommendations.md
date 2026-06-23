@@ -26,7 +26,7 @@ Recommended target:
 outcome
 ```
 
-The `results_historical.csv` dataset already contains an `outcome` column with three classes:
+The `results_historical.csv` dataset already contains an `outcome` column with three classes. The pipeline also exports `model_training_base.csv` as the lightweight base training handoff built from these completed historical matches.
 
 - `home_win`
 - `draw`
@@ -81,7 +81,7 @@ From `wc_2026_fixtures_enriched.csv`:
 - `team1_elo_snapshot_date`
 - `team2_elo_snapshot_date`
 
-From `results_historical.csv`:
+From `results_historical.csv` / `model_training_base.csv`:
 
 - `date`
 - `home_team`
@@ -375,6 +375,7 @@ Assumptions:
 
 - The cleaned Data Engineering datasets are trusted as the starting point.
 - `results_historical.csv` is the source of labeled outcomes.
+- `model_training_base.csv` is the pipeline-generated base training export.
 - `wc_2026_fixtures_enriched.csv` is the inference fixture dataset.
 - Feature engineering will create training-time features separately from enrichment outputs.
 - Predictions will initially target match outcome class, not exact scoreline.

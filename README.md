@@ -42,6 +42,7 @@ Raw data is stored under `data/raw/`. Cleaned and reusable outputs are stored un
 │   ├── processed/
 │   │   ├── elo_history.csv
 │   │   ├── elo_latest.csv
+│   │   ├── model_training_base.csv
 │   │   ├── results_future.csv
 │   │   ├── results_historical.csv
 │   │   ├── wc_2026_fixtures_enriched.csv
@@ -65,6 +66,14 @@ Raw data is stored under `data/raw/`. Cleaned and reusable outputs are stored un
 │   ├── dev.txt
 │   └── ds.txt
 ├── src/
+│   ├── cleaning/
+│   │   ├── clean_elo.py
+│   │   ├── clean_results.py
+│   │   └── standardize_teams.py
+│   ├── enrichment/
+│   │   └── enrich_fixtures.py
+│   ├── export/
+│   │   └── build_model_dataset.py
 │   ├── extract/
 │   ├── features/
 │   ├── load/
@@ -116,6 +125,10 @@ Processed datasets for feature engineering and modeling
 | `src/transform/clean_elo.py` | Cleans Elo ratings, standardizes country names, validates coverage, and creates the latest Elo snapshot. | `elo_history.csv`, `elo_latest.csv` |
 | `src/transform/enrich_fixtures.py` | Enriches all 104 World Cup 2026 fixtures with lean team and Elo metadata while preserving knockout placeholders. | `wc_2026_fixtures_enriched.csv` |
 
+### Pipeline Entry Point
+
+The root-level `main.py` runs the lightweight Data Engineering pipeline end to end. It uses the pipeline modules under `src/cleaning/`, `src/enrichment/`, and `src/export/`, which reuse the existing transform logic where possible.
+
 ## Processed Datasets
 
 | Dataset | Description |
@@ -127,6 +140,7 @@ Processed datasets for feature engineering and modeling
 | `wc_2026_teams_cleaned.csv` | Cleaned reference table for all 48 qualified World Cup 2026 teams. |
 | `wc_2026_fixtures_validated.csv` | Validated fixture table with group-stage teams and knockout placeholders. |
 | `wc_2026_fixtures_enriched.csv` | Lean enriched fixture dataset containing all 104 fixtures, selected team metadata, and selected Elo attributes. |
+| `model_training_base.csv` | Lightweight base modeling export from completed historical matches. This is not feature-engineered yet. |
 
 The main enriched fixture output keeps all 104 fixtures:
 
@@ -203,7 +217,23 @@ On Windows:
 pip install -r requirements.txt
 ```
 
-### 4. Run the Data Engineering transforms
+### 4. Run the Data Engineering pipeline
+
+The full lightweight Data Engineering pipeline can be run from the project root:
+
+```bash
+python main.py
+```
+
+This runs the cleaning, team/fixture standardization, fixture enrichment, and base modeling export steps.
+
+If your environment does not expose `python`, use:
+
+```bash
+.venv/bin/python main.py
+```
+
+### 5. Run individual Data Engineering transforms
 
 Clean historical results:
 
@@ -229,7 +259,7 @@ Expected enriched output:
 data/processed/wc_2026_fixtures_enriched.csv
 ```
 
-### 5. Explore notebooks
+### 6. Explore notebooks
 
 Notebook-based discovery and validation work is available in:
 

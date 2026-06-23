@@ -8,6 +8,7 @@ Reviewed files:
 
 - `elo_history.csv`
 - `elo_latest.csv`
+- `model_training_base.csv`
 - `results_future.csv`
 - `results_historical.csv`
 - `wc_2026_fixtures_enriched.csv`
@@ -18,22 +19,23 @@ Reviewed files:
 
 Generated date:
 
-- `2026-06-22`
+- `2026-06-23`
 
 Last reviewed date:
 
-- `2026-06-22`
+- `2026-06-23`
 
 Transform scripts:
 
 - `src/transform/clean_results.py`
 - `src/transform/clean_elo.py`
 - `src/transform/enrich_fixtures.py`
+- `src/export/build_model_dataset.py`
 
 Modeling handoff:
 
 - Initial target variable: `outcome`
-- Training dataset: `results_historical.csv`
+- Training dataset: `model_training_base.csv`
 - Inference dataset: `wc_2026_fixtures_enriched.csv`
 
 ## Join Keys
@@ -56,6 +58,7 @@ Join caveats:
 | --- | ---: | ---: | ---: | --- |
 | `elo_history.csv` | 4,683 | 23 | 0 | None |
 | `elo_latest.csv` | 48 | 23 | 0 | None |
+| `model_training_base.csv` | 49,433 | 10 | 0 | None |
 | `results_future.csv` | 44 | 9 | 0 | Expected missing scores |
 | `results_historical.csv` | 49,433 | 10 | 0 | None |
 | `wc_2026_fixtures_enriched.csv` | 104 | 26 | 0 | Expected placeholder metadata/Elo nulls |
@@ -204,6 +207,39 @@ Readiness:
 - Ready for historical analysis and model training.
 - Recommended future step: decide whether very old matches should be filtered or downweighted during feature engineering/modeling.
 
+## `model_training_base.csv`
+
+Purpose:
+
+- Lightweight base modeling export created from completed historical matches.
+- Provides a clean training handoff with the initial target variable.
+- This is not a feature-engineered dataset yet.
+
+Shape:
+
+- Rows: 49,433
+- Columns: 10
+
+Columns:
+
+```text
+date, home_team, away_team, home_score, away_score, tournament,
+city, country, neutral, outcome
+```
+
+Validation notes:
+
+- Duplicate rows: 0
+- Missing values: none
+- `date` parses successfully.
+- Initial target variable: `outcome`
+- Target values are non-null.
+
+Readiness:
+
+- Ready as the base training export for Feature Engineering.
+- Feature Engineering should add model features in a separate dataset rather than modifying this base export directly.
+
 ## `wc_2026_fixtures_validated.csv`
 
 Purpose:
@@ -335,6 +371,7 @@ All processed datasets are valid for their current intended purpose.
 Recommended usage:
 
 - Use `results_historical.csv` for training labels and historical modeling.
+- Use `model_training_base.csv` as the lightweight base training export for Feature Engineering.
 - Use `results_future.csv` only as future result-style reference data.
 - Use `elo_history.csv` for time-aware historical feature engineering.
 - Use `elo_latest.csv` for current team-strength enrichment.
