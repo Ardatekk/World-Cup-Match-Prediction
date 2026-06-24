@@ -3,8 +3,8 @@ name: Data Engineering Pipeline
 on:
   workflow_dispatch:
   schedule:
-    # GitHub Actions cron uses UTC. This runs at 15:00 Belgian summer time.
-    - cron: "0 13 * * *"
+    # GitHub Actions cron uses UTC. This runs at 08:00 Belgian summer time.
+    - cron: "0 6 * * *"
   push:
     branches:
       - main
@@ -46,7 +46,11 @@ jobs:
           test -f data/raw/FIFA_WC_1930_2026/wc_2026_fixtures.csv
 
       - name: Run Data Engineering pipeline
-        run: python main.py
+        env:
+          FOOTBALL_DATA_API_KEY: ${{ secrets.FOOTBALL_DATA_API_KEY }}
+        run: |
+          test -n "$FOOTBALL_DATA_API_KEY" || (echo "Missing FOOTBALL_DATA_API_KEY GitHub Secret" && exit 1)
+          python main.py
 
       - name: Check processed outputs
         run: |
@@ -58,9 +62,13 @@ jobs:
           test -s data/processed/wc_2026_fixtures_validated.csv
           test -s data/processed/wc_2026_fixtures_enriched.csv
           test -s data/processed/model_training_base.csv
+          test -s data/raw/live/football_data_wc_matches.json
+          test -s data/processed/live_matches.csv
 
       - name: Upload processed datasets
         uses: actions/upload-artifact@v4
         with:
           name: processed-data
-          path: data/processed/
+          path: |
+            data/processed/
+            data/raw/live/football_data_wc_matches.json
