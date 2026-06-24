@@ -1,6 +1,8 @@
 from pathlib import Path
 import pandas as pd
 
+from src.predict import predict_match
+
 BASE_DIR = Path(__file__).resolve().parents[2]
 PROCESSED_DIR = BASE_DIR / "data" / "processed"
 
@@ -122,6 +124,20 @@ def compare_teams(team1: str, team2: str) -> dict :
         "elo_difference": elo_difference,
         "stronger_team": team1_elo["team"] if elo_difference > 0 else team2_elo["team"]
     }
+
+def get_match_prediction(home: str, away: str) -> dict:
+    prediction = predict_match(home, away)
+
+    return {
+        "found": True,
+        "home_team": home,
+        "away_team": away,
+        "home_win": prediction["home_win"],
+        "draw": prediction["draw"],
+        "away_win": prediction["away_win"],
+        "favorite": prediction["favorite"],
+    }
+
 
 if __name__ == "__main__":
     print(get_team_elo("Belgium"))
