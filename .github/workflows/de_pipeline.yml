@@ -3,8 +3,8 @@ name: Data Engineering Pipeline
 on:
   workflow_dispatch:
   schedule:
-    # GitHub Actions cron uses UTC. This runs at 15:00 Belgian summer time.
-    - cron: "0 13 * * *"
+    # GitHub Actions cron uses UTC. This runs at 08:00 Belgian summer time.
+    - cron: "0 6 * * *"
   push:
     branches:
       - main
