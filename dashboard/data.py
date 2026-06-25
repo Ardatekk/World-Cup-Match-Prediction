@@ -40,6 +40,7 @@ class Team:
     campaign_l: int
     campaign_gf: int
     campaign_ga: int
+    campaign_results: list
 
 
 @lru_cache(maxsize=1)
@@ -50,7 +51,7 @@ def get_teams() -> list:
     teams = []
     for _, row in df.iterrows():
         f = form.get(row["team"], {"results": [], "goals_for": 0, "goals_against": 0})
-        c = campaign.get(row["team"], {"played": 0, "w": 0, "d": 0, "l": 0, "gf": 0, "ga": 0})
+        c = campaign.get(row["team"], {"played": 0, "w": 0, "d": 0, "l": 0, "gf": 0, "ga": 0, "results": []})
         teams.append(Team(
             name=row["team"], iso2=str(row.get("iso2") or ""), confederation=row["confederation"],
             elo=int(row["elo"]), group=row["group"], flag=row["flag"],
@@ -58,7 +59,7 @@ def get_teams() -> list:
             coach=row.get("coach", ""),
             recent_form=f["results"], goals_for_l5=f["goals_for"], goals_against_l5=f["goals_against"],
             campaign_played=c["played"], campaign_w=c["w"], campaign_d=c["d"], campaign_l=c["l"],
-            campaign_gf=c["gf"], campaign_ga=c["ga"],
+            campaign_gf=c["gf"], campaign_ga=c["ga"], campaign_results=c["results"],
         ))
     return teams
 
@@ -73,11 +74,13 @@ def get_matches() -> pd.DataFrame:
     `played=True` rows carry real scores; `played=False` rows carry the
     XGBoost model's win/draw/loss probabilities."""
     df = rd.load_group_matches().rename(columns={
-        "team1": "home_team", "team2": "away_team",
+        "team1": "home_team_predicted", "team2": "away_team_predicted",
         "team1_win_prob": "home_win_probability", "draw_prob": "draw_probability",
         "team2_win_prob": "away_win_probability",
         "team1_goals": "home_goals", "team2_goals": "away_goals",
     })
+    df["home_team"] = df["home_team_predicted"]
+    df["away_team"] = df["away_team_predicted"]
     df["date"] = df["date"].dt.strftime("%Y-%m-%d")
     return df
 

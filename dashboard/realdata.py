@@ -7,6 +7,7 @@ Inputs (data/raw/, produced by the DE/DS notebooks):
     elo_latest.csv                  current Elo rating + career W/D/L/goals per team
     predictions_2026.csv            XGBoost model output: team1/draw/team2 win probabilities
                                      for all 72 group-stage fixtures
+    live_matches.csv                football-data.org match status, kickoff time, and scores
     results_historical.csv          full historical results, incl. WC2026 matches already played
     wc_2026_fixtures_enriched.csv   fixtures + venue/city/Elo context, PLUS the 32 official
                                      knockout placeholder rows (R32 -> Final bracket skeleton)
@@ -36,6 +37,14 @@ _ISO2_OVERRIDES = {
     "Curaçao": "CW", "Czechia": "CZ",
 }
 
+_LIVE_TEAM_NAME_MAP = {
+    "United States": "USA",
+    "Bosnia-Herzegovina": "Bosnia and Herzegovina",
+    "Cape Verde Islands": "Cape Verde",
+    "Congo DR": "DR Congo",
+    "Turkey": "Türkiye",
+}
+
 
 def _flag_emoji(name: str, code_hint: str | None = None) -> str:
     iso2 = code_hint or _ISO2_OVERRIDES.get(name)
@@ -47,6 +56,12 @@ def _flag_emoji(name: str, code_hint: str | None = None) -> str:
         return chr(base + (ord(iso2[0]) - 65)) + chr(base + (ord(iso2[1]) - 65))
     except Exception:
         return "🏳️"
+
+
+def _pair_key(a, b):
+    if pd.isna(a) or pd.isna(b):
+        return None
+    return frozenset([a, b])
 
 
 @lru_cache(maxsize=1)
@@ -68,48 +83,77 @@ def load_teams() -> pd.DataFrame:
 
 
 @lru_cache(maxsize=1)
+def load_live_matches() -> pd.DataFrame:
+    """football-data.org match status and scores, normalized to project team names."""
+    path = RAW_DIR / "live_matches.csv"
+    if not path.exists():
+        return pd.DataFrame()
+
+    live = pd.read_csv(path, parse_dates=["utc_date", "last_updated"])
+    live = live.copy()
+    live["home_team"] = live["home_team"].replace(_LIVE_TEAM_NAME_MAP)
+    live["away_team"] = live["away_team"].replace(_LIVE_TEAM_NAME_MAP)
+    live = live[live["home_team"].notna() & live["away_team"].notna()].copy()
+    live["pair"] = live.apply(lambda r: _pair_key(r.home_team, r.away_team), axis=1)
+    return live
+
+
+@lru_cache(maxsize=1)
 def load_group_matches() -> pd.DataFrame:
-    """All 72 group-stage fixtures: model probabilities + actual result if played."""
+    """All 72 group-stage fixtures: model probabilities + live status/scores."""
     pred = pd.read_csv(RAW_DIR / "predictions_2026.csv", parse_dates=["date"])
-    hist = pd.read_csv(RAW_DIR / "results_historical.csv", parse_dates=["date"])
     fixtures = pd.read_csv(RAW_DIR / "wc_2026_fixtures_enriched.csv")
     fixtures = fixtures[fixtures["is_placeholder_match"] == False]  # noqa: E712
 
-    wc = hist[(hist["tournament"] == "FIFA World Cup") &
-              (hist["date"] >= "2026-06-01")].copy()
-
-    def pair_key(a, b):
-        return frozenset([a, b])
-
     pred = pred.copy()
-    pred["pair"] = pred.apply(lambda r: pair_key(r.team1, r.team2), axis=1)
-    wc["pair"] = wc.apply(lambda r: pair_key(r.home_team, r.away_team), axis=1)
+    pred["pair"] = pred.apply(lambda r: _pair_key(r.team1, r.team2), axis=1)
 
-    merged = pred.merge(
-        wc[["pair", "home_team", "home_score", "away_score"]],
-        on="pair", how="left",
-    )
+    live = load_live_matches()
+    live_cols = [
+        "pair", "match_id", "match_date", "kickoff_time_utc", "status",
+        "is_finished", "is_scheduled", "has_score", "score_display",
+        "home_team", "away_team", "home_score", "away_score",
+    ]
+    if not live.empty:
+        live_group = live[live["stage"].eq("GROUP_STAGE")].copy()
+        merged = pred.merge(live_group[live_cols].drop_duplicates("pair"), on="pair", how="left")
+    else:
+        merged = pred.copy()
+        for col in live_cols:
+            if col != "pair":
+                merged[col] = pd.NA
 
     # Attach venue/city/Elo context from the enriched fixtures file.
     fixtures = fixtures.copy()
-    fixtures["pair"] = fixtures.apply(lambda r: pair_key(r.team1, r.team2), axis=1)
+    fixtures["pair"] = fixtures.apply(lambda r: _pair_key(r.team1, r.team2), axis=1)
     context_cols = ["pair", "venue", "city", "country", "kickoff_et",
                      "team1_elo_rating", "team2_elo_rating"]
     merged = merged.merge(fixtures[context_cols].drop_duplicates("pair"), on="pair", how="left")
 
-    merged["played"] = merged["home_score"].notna()
+    merged["is_finished"] = merged["is_finished"].fillna(False).astype(bool)
+    merged["is_scheduled"] = merged["is_scheduled"].fillna(True).astype(bool)
+    merged["has_score"] = merged["has_score"].fillna(False).astype(bool)
+    merged["played"] = merged["is_finished"] & merged["has_score"]
+    merged["status"] = merged["status"].fillna("SCHEDULED")
+    merged["match_date"] = merged["match_date"].fillna(merged["date"].dt.strftime("%Y-%m-%d"))
+    merged["score_display"] = merged["score_display"].fillna("TBD")
 
-    def resolve_goals(row, col_for_team1):
-        """home_score/away_score are relative to results_historical's home_team,
-        which doesn't always equal team1 — resolve to team1/team2 perspective."""
-        if pd.isna(row["home_score"]):
+    def resolve_live_goals(row, col_for_team1):
+        if not row["has_score"]:
             return None
         if row["home_team"] == row["team1"]:
             return row["home_score"] if col_for_team1 else row["away_score"]
         return row["away_score"] if col_for_team1 else row["home_score"]
 
-    merged["team1_goals"] = merged.apply(lambda r: resolve_goals(r, True), axis=1)
-    merged["team2_goals"] = merged.apply(lambda r: resolve_goals(r, False), axis=1)
+    merged["team1_goals"] = merged.apply(lambda r: resolve_live_goals(r, True), axis=1)
+    merged["team2_goals"] = merged.apply(lambda r: resolve_live_goals(r, False), axis=1)
+
+    def score_display(row):
+        if not row["has_score"]:
+            return "TBD"
+        return f"{int(row['team1_goals'])}-{int(row['team2_goals'])}"
+
+    merged["score_display"] = merged.apply(score_display, axis=1)
 
     def actual_outcome(row):
         if not row["played"]:
@@ -135,7 +179,7 @@ def load_group_matches() -> pd.DataFrame:
     ).astype(str)
     merged["upset_risk_score"] = (1 - merged["confidence_score"]).round(2)
 
-    merged = merged.drop(columns=["pair", "home_team", "home_score", "away_score"])
+    merged = merged.drop(columns=["pair"])
     return merged.sort_values(["group", "date"]).reset_index(drop=True)
 
 
@@ -181,20 +225,29 @@ def load_campaign_stats() -> dict:
     teams = load_teams()["team"].tolist()
     stats = {}
     for team in teams:
-        rows = played[(played.team1 == team) | (played.team2 == team)]
+        rows = played[(played.team1 == team) | (played.team2 == team)].sort_values(
+            ["match_date", "kickoff_time_utc"]
+        )
         w = d = l = gf = ga = 0
+        results = []
         for _, r in rows.iterrows():
             is_t1 = r.team1 == team
             my_goals = r.team1_goals if is_t1 else r.team2_goals
             opp_goals = r.team2_goals if is_t1 else r.team1_goals
+            if pd.isna(my_goals) or pd.isna(opp_goals):
+                continue
             gf += my_goals
             ga += opp_goals
             if my_goals > opp_goals:
                 w += 1
+                results.append("W")
             elif my_goals < opp_goals:
                 l += 1
+                results.append("L")
             else:
                 d += 1
-        stats[team] = {"played": len(rows), "w": w, "d": d, "l": l,
-                        "gf": int(gf), "ga": int(ga), "points": w * 3 + d}
+                results.append("D")
+        stats[team] = {"played": w + d + l, "w": w, "d": d, "l": l,
+                        "gf": int(gf), "ga": int(ga), "points": w * 3 + d,
+                        "results": results}
     return stats
