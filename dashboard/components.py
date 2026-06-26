@@ -24,7 +24,7 @@ def _flag_image_url(team, size: str = "w40") -> str | None:
 
 
 def _flag_image_html(team, class_name: str = "wc-team-flag-img") -> str:
-    size = "w320" if class_name == "wc-detail-team-flag" else "w40"
+    size = "w320" if class_name in {"wc-detail-team-flag", "wc-elo-flag", "wc-ta-hero-flag", "wc-ta-crest"} else "w40"
     url = _flag_image_url(team, size)
     if not url:
         return f'<span class="wc-team-flag">{team.flag}</span>'
@@ -761,6 +761,502 @@ h1, h2, h3 {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+.wc-elo-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(320px, .85fr);
+    gap: 14px;
+}
+.wc-elo-table {
+    display: grid;
+    gap: 0;
+}
+.wc-elo-table-row {
+    display: grid;
+    grid-template-columns: 38px minmax(170px, 1fr) 86px 64px 74px 82px 110px;
+    gap: 10px;
+    align-items: center;
+    min-height: 38px;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+    color: #eef6ff;
+    font-size: .82rem;
+}
+.wc-elo-table-row:last-child { border-bottom: 0; }
+.wc-elo-table-head {
+    color: rgba(221,232,245,.62);
+    text-transform: uppercase;
+    font-size: .64rem;
+    font-weight: 800;
+}
+.wc-elo-table-selected {
+    background: rgba(98, 164, 225, .13);
+    border-radius: 6px;
+    border-bottom-color: transparent;
+    box-shadow: inset 3px 0 0 rgba(119, 181, 239, .85);
+}
+.wc-elo-team {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    font-weight: 800;
+}
+.wc-elo-team span:last-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.wc-elo-bar {
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.08);
+    overflow: hidden;
+}
+.wc-elo-fill {
+    display: block;
+    width: var(--w);
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #5ca736, #9cca4f);
+}
+.wc-elo-profile {
+    display: grid;
+    gap: 12px;
+}
+.wc-elo-hero {
+    min-height: 178px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid rgba(118, 165, 224, .22);
+    background: linear-gradient(135deg, rgba(8, 48, 82, .96), rgba(5, 24, 44, .96));
+}
+.wc-elo-hero::after {
+    content: "";
+    position: absolute;
+    right: -38px;
+    bottom: -52px;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.05);
+}
+.wc-elo-flag {
+    position: absolute;
+    right: 16px;
+    top: 18px;
+    width: 72px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 5px;
+    box-shadow: 0 12px 28px rgba(0,0,0,.30), 0 0 0 1px rgba(255,255,255,.20);
+}
+.wc-elo-rank-label {
+    color: rgba(234, 244, 252, .74);
+    font-size: .72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+.wc-elo-country {
+    color: #ffffff;
+    font-size: 1.45rem;
+    font-weight: 800;
+    margin-top: 8px;
+    max-width: calc(100% - 96px);
+}
+.wc-elo-value {
+    color: #ffffff;
+    font-size: 2.05rem;
+    font-weight: 800;
+    margin-top: 14px;
+}
+.wc-elo-sub {
+    color: rgba(234, 244, 252, .80);
+    font-size: .82rem;
+    margin-top: 6px;
+}
+.wc-elo-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+.wc-elo-kpi {
+    border: 1px solid rgba(130, 173, 222, .15);
+    border-radius: 8px;
+    padding: 12px;
+    background: rgba(13, 31, 49, .72);
+}
+.wc-elo-kpi-label {
+    color: rgba(221,232,245,.68);
+    font-size: .66rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+.wc-elo-kpi-value {
+    color: #ffffff;
+    font-size: 1.08rem;
+    font-weight: 800;
+    margin-top: 7px;
+}
+.wc-ta-shell {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1.42fr) minmax(330px, .92fr);
+    gap: 16px;
+    align-items: start;
+}
+.wc-ta-panel {
+    background: linear-gradient(145deg, rgba(9, 28, 46, .94), rgba(5, 17, 30, .96));
+    border: 1px solid rgba(130, 173, 222, .16);
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 18px 50px rgba(0,0,0,.22);
+}
+.wc-ta-side {
+    position: sticky;
+    top: 86px;
+}
+.wc-ta-side-label,
+.wc-ta-section-title,
+.wc-ta-performer-label {
+    color: rgba(234, 244, 252, .78);
+    font-size: .72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+.wc-ta-selected-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid rgba(130, 173, 222, .18);
+    background: rgba(12, 30, 49, .88);
+    border-radius: 7px;
+    padding: 10px;
+    margin: 10px 0 16px;
+    color: #ffffff;
+    font-weight: 800;
+}
+.wc-ta-list {
+    display: grid;
+    gap: 3px;
+    margin-top: 10px;
+}
+.wc-ta-list-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 34px;
+    border-radius: 6px;
+    padding: 7px 9px;
+    color: #eaf2fb;
+    font-size: .84rem;
+    font-weight: 700;
+}
+.wc-ta-list-row-active {
+    background: rgba(84, 177, 80, .18);
+    box-shadow: inset 3px 0 0 #6fd34e;
+}
+.wc-ta-list-team {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+.wc-ta-list-team span:last-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.wc-ta-active-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #6fd34e;
+    flex: 0 0 auto;
+}
+.wc-ta-main,
+.wc-ta-right {
+    display: grid;
+    gap: 16px;
+}
+.wc-ta-hero {
+    min-height: 236px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    padding: 34px 34px;
+    border: 1px solid rgba(130, 173, 222, .18);
+    background:
+        linear-gradient(110deg, rgba(105, 17, 24, .88), rgba(8, 23, 41, .72) 58%, rgba(5, 14, 26, .92)),
+        radial-gradient(circle at 68% 18%, rgba(255,255,255,.22), transparent 12%),
+        linear-gradient(0deg, rgba(255,255,255,.08) 0 1px, transparent 1px 100%),
+        linear-gradient(90deg, rgba(255,255,255,.06) 0 1px, transparent 1px 100%);
+    background-size: auto, auto, 44px 44px, 44px 44px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
+.wc-ta-hero::before {
+    content: "";
+    position: absolute;
+    inset: auto -8% 0 -8%;
+    height: 80px;
+    background: radial-gradient(ellipse at center, rgba(87, 139, 67, .34), rgba(16, 49, 31, .18) 45%, transparent 72%);
+}
+.wc-ta-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 16% 24%, rgba(255,255,255,.12), transparent 26%);
+    pointer-events: none;
+}
+.wc-ta-hero-content {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 28px;
+    align-items: center;
+}
+.wc-ta-hero-flag {
+    width: 112px;
+    height: 112px;
+    object-fit: cover;
+    border-radius: 24px;
+    box-shadow: 0 18px 38px rgba(0,0,0,.34), 0 0 0 1px rgba(255,255,255,.20);
+}
+.wc-ta-country {
+    color: #ffffff;
+    font-size: 2.55rem;
+    line-height: 1;
+    font-weight: 900;
+}
+.wc-ta-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 28px;
+}
+.wc-ta-meta-item {
+    border-left: 1px solid rgba(255,255,255,.10);
+    padding-left: 14px;
+}
+.wc-ta-meta-item:first-child {
+    border-left: 0;
+    padding-left: 0;
+}
+.wc-ta-meta-label {
+    color: rgba(238, 246, 255, .78);
+    font-size: .78rem;
+}
+.wc-ta-meta-value {
+    color: #67e05b;
+    font-size: 1.35rem;
+    font-weight: 900;
+    margin-top: 8px;
+}
+.wc-ta-meta-value-muted {
+    color: #ffffff;
+}
+.wc-ta-performer-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+.wc-ta-performer {
+    min-height: 132px;
+    border: 1px solid rgba(130, 173, 222, .15);
+    border-radius: 8px;
+    padding: 12px;
+    background: rgba(10, 29, 48, .74);
+    position: relative;
+    overflow: hidden;
+}
+.wc-ta-performer::after {
+    content: "";
+    position: absolute;
+    right: -26px;
+    bottom: -30px;
+    width: 82px;
+    height: 82px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.04);
+}
+.wc-ta-performer-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.wc-ta-performer-icon {
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #357a45;
+    color: #ffffff;
+    font-size: .72rem;
+    font-weight: 900;
+}
+.wc-ta-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    margin-top: 18px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(145deg, rgba(92, 151, 210, .38), rgba(16, 42, 66, .86));
+    color: #ffffff;
+    font-size: 1.05rem;
+    font-weight: 900;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.14);
+}
+.wc-ta-performer-name {
+    color: #ffffff;
+    font-size: .86rem;
+    font-weight: 800;
+    margin-top: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.wc-ta-performer-value {
+    color: #71df55;
+    font-size: 1.55rem;
+    line-height: 1;
+    font-weight: 900;
+    margin-top: 4px;
+}
+.wc-ta-performer-unit {
+    color: rgba(235, 244, 255, .78);
+    font-size: .75rem;
+    margin-top: 3px;
+}
+.wc-ta-outlook-row {
+    margin: 0 0 18px;
+}
+.wc-ta-outlook-head {
+    display: flex;
+    justify-content: space-between;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: .88rem;
+    margin-bottom: 8px;
+}
+.wc-ta-track {
+    height: 7px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.08);
+    overflow: hidden;
+}
+.wc-ta-fill {
+    display: block;
+    width: var(--w);
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #4faf47, #9bd34c);
+}
+.wc-ta-fill-gold {
+    background: linear-gradient(90deg, #d4a82d, #8cb83f);
+}
+.wc-ta-overview-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+.wc-ta-overview-card {
+    min-height: 96px;
+    border: 1px solid rgba(130, 173, 222, .15);
+    border-radius: 8px;
+    padding: 14px;
+    background: rgba(10, 29, 48, .70);
+}
+.wc-ta-overview-label {
+    color: rgba(221,232,245,.70);
+    font-size: .75rem;
+}
+.wc-ta-overview-value {
+    color: #ffffff;
+    font-size: 1.55rem;
+    font-weight: 900;
+    margin-top: 10px;
+}
+.wc-ta-overview-sub {
+    color: rgba(221,232,245,.66);
+    font-size: .74rem;
+    margin-top: 6px;
+}
+.wc-ta-record {
+    min-height: 150px;
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr 96px;
+    align-items: center;
+    gap: 14px;
+    background: linear-gradient(120deg, rgba(11, 31, 53, .94), rgba(82, 15, 32, .82));
+}
+.wc-ta-crest {
+    width: 86px;
+    height: 58px;
+    object-fit: cover;
+    border-radius: 6px;
+    box-shadow: 0 12px 28px rgba(0,0,0,.30), 0 0 0 1px rgba(255,255,255,.18);
+}
+.wc-ta-record-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+.wc-ta-record-value {
+    color: #baf3a5;
+    font-size: 1.35rem;
+    font-weight: 900;
+    margin-bottom: 6px;
+}
+.wc-ta-match-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+.wc-ta-match-card {
+    border: 1px solid rgba(130, 173, 222, .15);
+    border-radius: 8px;
+    padding: 12px;
+    background: rgba(10, 29, 48, .70);
+}
+.wc-ta-match-meta {
+    color: rgba(221,232,245,.62);
+    font-size: .7rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.wc-ta-match-line {
+    display: grid;
+    grid-template-columns: 1fr 56px 1fr;
+    align-items: center;
+    gap: 8px;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: .78rem;
+}
+.wc-ta-match-team {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+.wc-ta-match-team span:last-child {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.wc-ta-score {
+    border-radius: 5px;
+    background: rgba(255,255,255,.12);
+    padding: 6px 8px;
+    text-align: center;
+}
 .wc-team-impact-row {
     display: grid;
     grid-template-columns: 28px minmax(110px, 1fr) minmax(110px, 1.2fr) 48px;
@@ -835,9 +1331,27 @@ h1, h2, h3 {
     .wc-title-card-grid,
     .wc-team-stats-grid,
     .wc-team-dashboard-grid,
-    .wc-mini-panel-grid {
+    .wc-mini-panel-grid,
+    .wc-elo-layout,
+    .wc-ta-shell,
+    .wc-ta-performer-grid,
+    .wc-ta-match-grid {
         grid-template-columns: 1fr;
         gap: 10px;
+    }
+    .wc-ta-side {
+        position: static;
+    }
+    .wc-ta-meta-grid,
+    .wc-ta-overview-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .wc-elo-table-row {
+        grid-template-columns: 34px minmax(130px, 1fr) 58px 64px 82px;
+    }
+    .wc-elo-table-row > div:nth-child(4),
+    .wc-elo-table-row > div:nth-child(5) {
+        display: none;
     }
 }
 @media (max-width: 900px) {
@@ -889,6 +1403,13 @@ h1, h2, h3 {
     color: #ffffff;
     font-weight: 800;
     text-transform: uppercase;
+}
+.wc-detail-elo {
+    color: rgba(203, 216, 229, .78);
+    font-size: .74rem;
+    font-weight: 700;
+    margin-top: 5px;
+    text-transform: none;
 }
 .wc-detail-team-flag {
     display: block;
@@ -1256,7 +1777,11 @@ def match_detail_panel(match_row, team1, team2, focus_team: str | None = None):
             </div>
 
             <div class="wc-detail-teams">
-                <div class="wc-detail-team">{home_flag}<div>{home_name}</div></div>
+                <div class="wc-detail-team">
+                    {home_flag}
+                    <div>{home_name}</div>
+                    <div class="wc-detail-elo">Elo {int(team1.elo)}</div>
+                </div>
                 <div class="wc-detail-vs">
                     <div class="wc-detail-vs-text">VS</div>
                     <div class="wc-detail-prob-grid">
@@ -1274,7 +1799,11 @@ def match_detail_panel(match_row, team1, team2, focus_team: str | None = None):
                         </div>
                     </div>
                 </div>
-                <div class="wc-detail-team">{away_flag}<div>{away_name}</div></div>
+                <div class="wc-detail-team">
+                    {away_flag}
+                    <div>{away_name}</div>
+                    <div class="wc-detail-elo">Elo {int(team2.elo)}</div>
+                </div>
             </div>
 
             <div class="wc-detail-confidence">
@@ -1726,156 +2255,252 @@ def knockout_bracket_panel(standings, round_reach, teams_by_name: dict):
     st.markdown(_compact_html(html), unsafe_allow_html=True)
 
 
-def team_stats_dashboard(teams: list, standings, round_reach, selected_team: str | None = None):
+_MOCK_PERFORMERS = {
+    "Spain": [
+        ("Most Goals", "Alvaro Morata", 3, "Goals", "MG"),
+        ("Most Assists", "Pedri", 2, "Assists", "AS"),
+        ("Most Passes", "Rodri", 246, "Passes", "PS"),
+        ("Best Pass Accuracy", "Rodri", "92%", "Accuracy", "PA"),
+        ("Most Shots", "Dani Olmo", 11, "Shots", "SH"),
+        ("Most Chances Created", "Pedri", 7, "Chances", "CC"),
+        ("Most Tackles", "Rodri", 8, "Tackles", "TK"),
+        ("Most Interceptions", "Laporte", 6, "Interceptions", "IN"),
+        ("Most Dribbles", "Nico Williams", 9, "Dribbles", "DR"),
+        ("Most Duels Won", "Aymeric Laporte", 15, "Duels", "DU"),
+        ("Most Fouls Won", "Lamine Yamal", 6, "Fouls Won", "FW"),
+        ("Team Minutes Played", "Unai Simon", 180, "Minutes", "MIN"),
+    ],
+    "Argentina": [
+        ("Most Goals", "Lautaro Martinez", 4, "Goals", "MG"),
+        ("Most Assists", "Lionel Messi", 3, "Assists", "AS"),
+        ("Most Passes", "Enzo Fernandez", 231, "Passes", "PS"),
+        ("Best Pass Accuracy", "Mac Allister", "91%", "Accuracy", "PA"),
+        ("Most Shots", "Julian Alvarez", 12, "Shots", "SH"),
+        ("Most Chances Created", "Lionel Messi", 9, "Chances", "CC"),
+        ("Most Tackles", "De Paul", 10, "Tackles", "TK"),
+        ("Most Interceptions", "Cristian Romero", 7, "Interceptions", "IN"),
+        ("Most Dribbles", "Nico Gonzalez", 8, "Dribbles", "DR"),
+        ("Most Duels Won", "Otamendi", 14, "Duels", "DU"),
+        ("Most Fouls Won", "Lionel Messi", 7, "Fouls Won", "FW"),
+        ("Team Minutes Played", "Emiliano Martinez", 180, "Minutes", "MIN"),
+    ],
+    "France": [
+        ("Most Goals", "Kylian Mbappe", 5, "Goals", "MG"),
+        ("Most Assists", "Antoine Griezmann", 3, "Assists", "AS"),
+        ("Most Passes", "Aurelien Tchouameni", 220, "Passes", "PS"),
+        ("Best Pass Accuracy", "William Saliba", "93%", "Accuracy", "PA"),
+        ("Most Shots", "Kylian Mbappe", 15, "Shots", "SH"),
+        ("Most Chances Created", "Ousmane Dembele", 8, "Chances", "CC"),
+        ("Most Tackles", "N'Golo Kante", 12, "Tackles", "TK"),
+        ("Most Interceptions", "William Saliba", 7, "Interceptions", "IN"),
+        ("Most Dribbles", "Kylian Mbappe", 10, "Dribbles", "DR"),
+        ("Most Duels Won", "Dayot Upamecano", 16, "Duels", "DU"),
+        ("Most Fouls Won", "Ousmane Dembele", 6, "Fouls Won", "FW"),
+        ("Team Minutes Played", "Mike Maignan", 180, "Minutes", "MIN"),
+    ],
+}
+
+
+def _mock_performers_for(team_name: str) -> list[tuple[str, str, object, str, str]]:
+    if team_name in _MOCK_PERFORMERS:
+        return _MOCK_PERFORMERS[team_name]
+    short = team_name.split()[0]
+    return [
+        ("Most Goals", f"{short} Forward", 3, "Goals", "MG"),
+        ("Most Assists", f"{short} Creator", 2, "Assists", "AS"),
+        ("Most Passes", f"{short} Midfielder", 210, "Passes", "PS"),
+        ("Best Pass Accuracy", f"{short} Defender", "90%", "Accuracy", "PA"),
+        ("Most Shots", f"{short} Attacker", 10, "Shots", "SH"),
+        ("Most Chances Created", f"{short} Playmaker", 6, "Chances", "CC"),
+        ("Most Tackles", f"{short} Ball Winner", 8, "Tackles", "TK"),
+        ("Most Interceptions", f"{short} Centre Back", 6, "Interceptions", "IN"),
+        ("Most Dribbles", f"{short} Winger", 7, "Dribbles", "DR"),
+        ("Most Duels Won", f"{short} Defender", 13, "Duels", "DU"),
+        ("Most Fouls Won", f"{short} Winger", 5, "Fouls Won", "FW"),
+        ("Team Minutes Played", f"{short} Goalkeeper", 180, "Minutes", "MIN"),
+    ]
+
+
+def _name_initials(name: str) -> str:
+    parts = [part for part in str(name).replace("-", " ").split() if part]
+    return "".join(part[0] for part in parts[:2]).upper() or "P"
+
+
+def team_stats_dashboard(teams: list, standings, round_reach, matches=None, selected_team: str | None = None):
     teams_by_name = {t.name: t for t in teams}
     rr = round_reach.set_index("team")
     st_by_team = standings.set_index("team")
+    ranked_teams = sorted(teams, key=lambda t: (-t.elo, t.name))
+    selected = teams_by_name.get(selected_team) or ranked_teams[0]
+    selected_rank = next((idx for idx, team in enumerate(ranked_teams, start=1) if team.name == selected.name), 1)
 
-    def team_row(name: str):
-        return teams_by_name[name], st_by_team.loc[name], rr.loc[name]
-
-    highest_elo = max(teams, key=lambda t: t.elo)
-    most_points_name = standings.sort_values(["points", "goal_difference"], ascending=[False, False]).iloc[0].team
-    most_goals_name = standings.sort_values(["goals_for", "points"], ascending=[False, False]).iloc[0].team
-    best_def_name = standings.sort_values(["goals_against", "points"], ascending=[True, False]).iloc[0].team
-    best_qual_name = round_reach.sort_values(["group_qualification_probability", "tournament_win_probability"], ascending=[False, False]).iloc[0].team
-    fav_name = round_reach.sort_values("tournament_win_probability", ascending=False).iloc[0].team
-
-    card_specs = [
-        ("Highest Elo", highest_elo.name, f"{highest_elo.elo}", "Elo rating", "blue"),
-        ("Most Points", most_points_name, f"{int(st_by_team.loc[most_points_name].points)}", "points", "green"),
-        ("Most Goals", most_goals_name, f"{int(st_by_team.loc[most_goals_name].goals_for)}", "goals for", ""),
-        ("Best Defense", best_def_name, f"{int(st_by_team.loc[best_def_name].goals_against)}", "goals against", "purple"),
-        ("Best Qualification", best_qual_name, f"{rr.loc[best_qual_name].group_qualification_probability * 100:.0f}%", "qualification chance", "green"),
-        ("Tournament Favorite", fav_name, f"{rr.loc[fav_name].tournament_win_probability * 100:.0f}%", "win probability", "gold"),
-    ]
-
-    cards = []
-    for label, name, value, sub, accent in card_specs:
-        team = teams_by_name[name]
-        flag = _flag_image_html(team, "wc-team-stat-flag")
-        accent_class = f" wc-team-stat-card-{accent}" if accent else ""
-        cards.append(
-            f"""<div class="wc-team-stat-card{accent_class}">
-                <div class="wc-team-stat-label">{label}</div>
-                <div class="wc-team-stat-value">{value}</div>
-                <div class="wc-team-stat-sub">{sub}</div>
-                <div class="wc-team-stat-name">{escape(name)}</div>
-                {flag}
-            </div>"""
-        )
-
-    ranking_names = [t.name for t in sorted(teams, key=lambda t: -t.elo)[:10]]
-    table_rows = []
-    for rank, name in enumerate(ranking_names, start=1):
-        team, standing, reach = team_row(name)
-        flag = _flag_image_html(team, "wc-group-flag-img")
-        table_rows.append(
-            f"""<div class="wc-team-table-row">
-                <div>{rank}</div>
-                <div class="wc-team-table-team">{flag}<span>{escape(name)}</span></div>
-                <div>{escape(team.group)}</div>
-                <div>{int(standing.played)}</div>
-                <div>{int(standing.points)}</div>
-                <div>{int(standing.goals_for)}</div>
-                <div>{team.elo}</div>
-                <div>{reach.tournament_win_probability * 100:.1f}%</div>
-            </div>"""
-        )
-
-    impact_df = standings.merge(round_reach[["team", "tournament_win_probability"]], on="team")
-    impact_df["impact_score"] = (
-        impact_df["points"] * 9
-        + impact_df["goal_difference"] * 3
-        + impact_df["group_qualification_probability"] * 25
-        + impact_df["tournament_win_probability"] * 100
-    )
-    impact_df = impact_df.sort_values("impact_score", ascending=False).head(10)
-    max_impact = max(float(impact_df["impact_score"].max()), 1.0)
-    impact_rows = []
-    for rank, row in enumerate(impact_df.itertuples(index=False), start=1):
-        width = float(row.impact_score) / max_impact * 100
-        impact_rows.append(
-            f"""<div class="wc-team-impact-row">
-                <div>{rank}</div><div>{escape(row.team)}</div>
-                <div class="wc-team-impact-bar"><span class="wc-team-impact-fill" style="--w:{width:.1f}%;"></span></div>
-                <div>{row.impact_score:.1f}</div>
-            </div>"""
-        )
-
-    goals_df = standings.sort_values(["goals_for", "points"], ascending=[False, False]).head(8)
-    max_goals = max(float(goals_df["goals_for"].max()), 1.0)
-    goal_rows = []
-    for row in goals_df.itertuples(index=False):
-        width = float(row.goals_for) / max_goals * 100
-        goal_rows.append(
-            f"""<div class="wc-team-bar-row">
-                <div>{escape(row.team)}</div>
-                <div class="wc-team-bar-track"><span class="wc-team-bar-fill" style="--w:{width:.1f}%;"></span></div>
-                <div>{int(row.goals_for)}</div>
-            </div>"""
-        )
-
-    defense_df = standings.sort_values(["goals_against", "points"], ascending=[True, False]).head(5)
-    defense_donuts = []
-    max_ga = max(float(standings["goals_against"].max()), 1.0)
-    for row in defense_df.itertuples(index=False):
-        pct = max(0, 100 - (float(row.goals_against) / max_ga) * 100)
-        defense_donuts.append(
-            f"""<div class="wc-donut-item">
-                <div class="wc-donut" style="--p:{pct:.0f};">{int(row.goals_against)}</div>
-                <div class="wc-donut-name">{escape(row.team)}<br><span style="opacity:.7;">GA</span></div>
-            </div>"""
-        )
-
-    selected = teams_by_name.get(selected_team) or teams[0]
     selected_rr = rr.loc[selected.name]
     selected_st = st_by_team.loc[selected.name]
-    selected_flag = _flag_image_html(selected, "wc-group-flag-img")
-    selected_form = " ".join(selected.campaign_results or selected.recent_form) or "n/a"
+    selected_flag = _flag_image_html(selected, "wc-ta-hero-flag")
+    selected_crest = _flag_image_html(selected, "wc-ta-crest")
+    side_flag = _flag_image_html(selected, "wc-group-flag-img")
+    selected_form_values = selected.campaign_results or selected.recent_form
+    selected_form = _form_chips(selected_form_values)
+    selected_record = (
+        f"{selected.campaign_w}W {selected.campaign_d}D {selected.campaign_l}L"
+        if selected.campaign_played
+        else "No WC matches played"
+    )
+    form_goals = (
+        f"GF {selected.campaign_gf} / GA {selected.campaign_ga}"
+        if selected.campaign_played
+        else f"GF {selected.goals_for_l5} / GA {selected.goals_against_l5}"
+    )
 
-    html = f"""<div class="wc-panel">
-        <div class="wc-panel-title">Top Team Performers Overview</div>
-        <div class="wc-team-stats-grid">{''.join(cards)}</div>
-    </div>
-    <div class="wc-team-dashboard-grid">
-        <div class="wc-detail-mini">
-            <div class="wc-detail-mini-title">Top Teams Overview</div>
-            <div class="wc-team-table">
-                <div class="wc-team-table-row wc-team-table-head">
-                    <div>#</div><div>Team</div><div>Grp</div><div>P</div><div>Pts</div><div>GF</div><div>Elo</div><div>Win %</div>
+    side_teams = ranked_teams[:14]
+    if selected.name not in {team.name for team in side_teams}:
+        side_teams = [selected] + side_teams[:13]
+    side_rows = []
+    for team in side_teams:
+        active = " wc-ta-list-row-active" if team.name == selected.name else ""
+        active_dot = '<span class="wc-ta-active-dot"></span>' if team.name == selected.name else ""
+        flag = _flag_image_html(team, "wc-group-flag-img")
+        side_rows.append(
+            f"""<div class="wc-ta-list-row{active}">
+                <div class="wc-ta-list-team">{flag}<span>{escape(team.name)}</span></div>
+                {active_dot}
+            </div>"""
+        )
+
+    performer_rows = []
+    color_palette = ["#3fa659", "#2f7bd8", "#7d49dc", "#d46a2f", "#d5a52a", "#34a9b2", "#c04578", "#579bd8"]
+    for idx, (label, player, value, unit, token) in enumerate(_mock_performers_for(selected.name)):
+        color = color_palette[idx % len(color_palette)]
+        performer_rows.append(
+            f"""<div class="wc-ta-performer">
+                <div class="wc-ta-performer-top">
+                    <div class="wc-ta-performer-icon" style="background:{color};">{escape(token)}</div>
+                    <div class="wc-ta-performer-label">{escape(label)}</div>
                 </div>
-                {''.join(table_rows)}
-            </div>
-        </div>
-        <div class="wc-detail-mini">
-            <div class="wc-detail-mini-title">Team Impact Ranking</div>
-            <div class="wc-team-note">Impact combines live points, goal difference, qualification chance, and title probability.</div>
-            {''.join(impact_rows)}
-        </div>
-        <div class="wc-detail-mini">
-            <div class="wc-detail-mini-title">Goals Scored</div>
-            <div class="wc-team-bars">{''.join(goal_rows)}</div>
-        </div>
-    </div>
-    <div class="wc-mini-panel-grid">
-        <div class="wc-detail-mini">
-            <div class="wc-detail-mini-title">Best Defenses</div>
-            <div class="wc-team-donut-row">{''.join(defense_donuts)}</div>
-        </div>
-        <div class="wc-detail-mini">
-            <div class="wc-detail-mini-title">Selected Team</div>
-            <div class="wc-score-big">{selected_flag} {escape(selected.name)}</div>
-            <div class="wc-score-sub">Group {escape(selected.group)} | {escape(selected.confederation)}</div>
-            <div class="wc-team-note">Form: {escape(selected_form)} | {int(selected_st.points)} pts | GF {int(selected_st.goals_for)} / GA {int(selected_st.goals_against)}</div>
-        </div>
-        <div class="wc-detail-mini">
-            <div class="wc-detail-mini-title">Tournament Outlook</div>
-            <div class="wc-stat-line"><span>Qualification Chance</span><span class="wc-stat-value">{selected_rr.group_qualification_probability * 100:.1f}%</span></div>
-            <div class="wc-stat-line"><span>Round of 16</span><span class="wc-stat-value">{selected_rr.round_of_16 * 100:.1f}%</span></div>
-            <div class="wc-stat-line"><span>Quarterfinal</span><span class="wc-stat-value">{selected_rr.quarterfinal * 100:.1f}%</span></div>
-            <div class="wc-stat-line"><span>Win Tournament</span><span class="wc-stat-value">{selected_rr.tournament_win_probability * 100:.1f}%</span></div>
-        </div>
+                <div class="wc-ta-avatar">{escape(_name_initials(player))}</div>
+                <div class="wc-ta-performer-name">{escape(player)}</div>
+                <div class="wc-ta-performer-value">{value}</div>
+                <div class="wc-ta-performer-unit">{escape(unit)}</div>
+            </div>"""
+        )
+
+    match_rows = []
+    if matches is not None:
+        team_matches = matches[(matches.home_team == selected.name) | (matches.away_team == selected.name)].copy()
+        team_matches = team_matches.sort_values(["match_date", "kickoff_time_utc"]).head(3)
+        for row in team_matches.itertuples(index=False):
+            home = teams_by_name.get(row.home_team)
+            away = teams_by_name.get(row.away_team)
+            home_flag = _flag_image_html(home, "wc-group-flag-img") if home else ""
+            away_flag = _flag_image_html(away, "wc-group-flag-img") if away else ""
+            score = row.score_display if str(row.score_display) != "TBD" else "- -"
+            match_rows.append(
+                f"""<div class="wc-ta-match-card">
+                    <div class="wc-ta-match-meta"><span>{escape(str(row.match_date))}</span><span>Group {escape(str(row.group))}</span></div>
+                    <div class="wc-ta-match-line">
+                        <div class="wc-ta-match-team">{home_flag}<span>{escape(str(row.home_team))}</span></div>
+                        <div class="wc-ta-score">{escape(str(score))}</div>
+                        <div class="wc-ta-match-team">{away_flag}<span>{escape(str(row.away_team))}</span></div>
+                    </div>
+                </div>"""
+            )
+    if not match_rows:
+        match_rows.append('<div class="wc-ta-match-card"><div class="wc-ta-match-meta">No matches available</div></div>')
+
+    gf_per_game = selected.campaign_gf / selected.campaign_played if selected.campaign_played else 0
+    ga_per_game = selected.campaign_ga / selected.campaign_played if selected.campaign_played else 0
+    overview_cards = [
+        ("Matches Played", selected.campaign_played, ""),
+        ("Goals For", selected.campaign_gf, f"{gf_per_game:.1f} per game"),
+        ("Goals Against", selected.campaign_ga, f"{ga_per_game:.1f} per game"),
+        ("Group Points", int(selected_st.points), f"Group {selected.group}"),
+        ("FIFA Rank", f"#{selected.fifa_rank}", selected.confederation),
+        ("Elo Rank", f"#{selected_rank}", f"Elo {selected.elo}"),
+    ]
+    overview_html = "".join(
+        f"""<div class="wc-ta-overview-card">
+            <div class="wc-ta-overview-label">{escape(label)}</div>
+            <div class="wc-ta-overview-value">{value}</div>
+            <div class="wc-ta-overview-sub">{escape(sub)}</div>
+        </div>"""
+        for label, value, sub in overview_cards
+    )
+
+    outlook_rows = [
+        ("Qualification Chance", selected_rr.group_qualification_probability, ""),
+        ("Round of 16", selected_rr.round_of_16, ""),
+        ("Quarterfinal", selected_rr.quarterfinal, ""),
+        ("Semifinal", selected_rr.semifinal, ""),
+        ("Win Tournament", selected_rr.tournament_win_probability, " wc-ta-fill-gold"),
+    ]
+    outlook_html = "".join(
+        f"""<div class="wc-ta-outlook-row">
+            <div class="wc-ta-outlook-head"><span>{escape(label)}</span><span>{prob * 100:.1f}%</span></div>
+            <div class="wc-ta-track"><span class="wc-ta-fill{accent}" style="--w:{prob * 100:.1f}%;"></span></div>
+        </div>"""
+        for label, prob, accent in outlook_rows
+    )
+
+    html = f"""<div class="wc-ta-shell">
+        <aside class="wc-ta-panel wc-ta-side">
+            <div class="wc-ta-side-label">Selected Country</div>
+            <div class="wc-ta-selected-box">{side_flag}<span>{escape(selected.name)}</span></div>
+            <div class="wc-ta-side-label">All Teams</div>
+            <div class="wc-ta-list">{''.join(side_rows)}</div>
+            <div class="wc-ta-selected-box" style="justify-content:center;margin-top:18px;color:#9be36c;">Compare Teams</div>
+        </aside>
+
+        <main class="wc-ta-main">
+            <section class="wc-ta-hero">
+                <div class="wc-ta-hero-content">
+                    {selected_flag}
+                    <div>
+                        <div class="wc-ta-country">{escape(selected.name)}</div>
+                        <div class="wc-ta-meta-grid">
+                            <div class="wc-ta-meta-item"><div class="wc-ta-meta-label">FIFA Rank</div><div class="wc-ta-meta-value">{selected.fifa_rank}</div></div>
+                            <div class="wc-ta-meta-item"><div class="wc-ta-meta-label">Elo Rating</div><div class="wc-ta-meta-value">{selected.elo}</div></div>
+                            <div class="wc-ta-meta-item"><div class="wc-ta-meta-label">Elo Rank</div><div class="wc-ta-meta-value">{selected_rank}</div></div>
+                            <div class="wc-ta-meta-item"><div class="wc-ta-meta-label">Confederation</div><div class="wc-ta-meta-value wc-ta-meta-value-muted">{escape(selected.confederation)}</div></div>
+                            <div class="wc-ta-meta-item"><div class="wc-ta-meta-label">Group</div><div class="wc-ta-meta-value wc-ta-meta-value-muted">{escape(selected.group)}</div></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="wc-ta-panel">
+                <div class="wc-panel-title">Top Performers ({escape(selected.name)})</div>
+                <div class="wc-ta-performer-grid">{''.join(performer_rows)}</div>
+                <div class="wc-ta-overview-sub" style="text-align:center;margin-top:12px;">Mock player statistics until a real squad/player dataset is added.</div>
+            </section>
+
+            <section class="wc-ta-panel">
+                <div class="wc-panel-title">Recent Matches</div>
+                <div class="wc-ta-match-grid">{''.join(match_rows)}</div>
+            </section>
+        </main>
+
+        <aside class="wc-ta-right">
+            <section class="wc-ta-panel wc-ta-record">
+                <div>
+                    <div class="wc-ta-section-title">This World Cup</div>
+                    <div class="wc-ta-record-grid" style="margin-top:18px;">
+                        <div><div class="wc-ta-record-value">{escape(selected_record)}</div><div class="wc-ta-overview-sub">Record</div></div>
+                        <div><div class="wc-ta-record-value">{int(selected_st.points)}</div><div class="wc-ta-overview-sub">Group Points</div></div>
+                        <div><div class="wc-ta-section-title">Recent Form</div><div class="wc-form-row" style="justify-content:flex-start;">{selected_form}</div><div class="wc-ta-overview-sub">{form_goals}</div></div>
+                        <div><div class="wc-ta-section-title">Goal Difference</div><div class="wc-ta-record-value">{int(selected_st.goal_difference):+d}</div></div>
+                    </div>
+                </div>
+                {selected_crest}
+            </section>
+            <section class="wc-ta-panel">
+                <div class="wc-panel-title">Tournament Outlook</div>
+                {outlook_html}
+            </section>
+            <section class="wc-ta-panel">
+                <div class="wc-panel-title">Team Overview</div>
+                <div class="wc-ta-overview-grid">{overview_html}</div>
+            </section>
+        </aside>
     </div>"""
     st.markdown(_compact_html(html), unsafe_allow_html=True)
 

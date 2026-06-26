@@ -220,33 +220,21 @@ def page_bracket():
 def page_teams():
     st.markdown('<div class="wc-top-spacer"></div>', unsafe_allow_html=True)
     teams = get_teams()
-    names = sorted(t.name for t in teams)
-    header_col, group_col, select_col = st.columns([2.15, .9, 1])
+    names = [t.name for t in sorted(teams, key=lambda t: (-t.elo, t.name))]
+    header_col, select_col = st.columns([2.35, 1])
     with header_col:
         st.markdown(
-            """<div class="wc-page-title">Team Stats</div>
-            <div class="wc-page-subtitle">Explore key team statistics and tournament performance</div>""",
+            """<div class="wc-page-title">Team Elo Rankings</div>
+            <div class="wc-page-subtitle">Search countries, compare Elo strength, and inspect tournament context</div>""",
             unsafe_allow_html=True,
         )
-    with group_col:
-        group_filter = st.selectbox("Group", ["All"] + sorted({t.group for t in teams}), key="team_group_filter")
     with select_col:
-        choice = st.selectbox("Select a country", names)
+        choice = st.selectbox("Search country", names)
     team = get_team(choice)
     round_reach = get_round_reach()
     standings = get_group_standings()
-    visible_teams = [t for t in teams if group_filter == "All" or t.group == group_filter]
-    visible_names = {t.name for t in visible_teams}
-    visible_standings = standings[standings.team.isin(visible_names)]
-    visible_round_reach = round_reach[round_reach.team.isin(visible_names)]
-    team_stats_dashboard(visible_teams, visible_standings, visible_round_reach, selected_team=team.name)
-
-    st.markdown("### Group-stage fixtures")
     matches = get_matches()
-    team_matches = matches[(matches.home_team == team.name) | (matches.away_team == team.name)]
-    for _, m in team_matches.iterrows():
-        t1, t2 = get_team(m.home_team), get_team(m.away_team)
-        match_card(m, t1, t2)
+    team_stats_dashboard(teams, standings, round_reach, matches=matches, selected_team=team.name)
 
 
 # ------------------------------------------------------------------- About
