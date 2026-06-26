@@ -44,7 +44,6 @@ from components import (
     team_stats_dashboard,
     fifa_overview_dashboard,
 )
-from src.predict import predict_match
 
 st.set_page_config(page_title="World Cup 2026 Predictions", layout="wide", page_icon="⚽")
 inject_css()
@@ -97,6 +96,8 @@ def _next_resolved_knockout_match(knockout_matches):
     home = str(row["home_team"])
     away = str(row["away_team"])
     try:
+        from src.predict import predict_match
+
         prediction = predict_match(home, away)
     except Exception:
         prediction = {"home_win": 1 / 3, "draw": 1 / 3, "away_win": 1 / 3}
