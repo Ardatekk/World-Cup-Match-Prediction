@@ -11,6 +11,7 @@ Inputs (data/raw/, produced by the DE/DS notebooks):
     results_historical.csv          full historical results, incl. WC2026 matches already played
     wc_2026_fixtures_enriched.csv   fixtures + venue/city/Elo context, PLUS the 32 official
                                      knockout placeholder rows (R32 -> Final bracket skeleton)
+    knockout_matches.csv            resolved knockout slots where group standings are final
 
 This module does the joining/cleaning once (cached) and exposes plain
 DataFrames/dicts that simulate.py and data.py build on.
@@ -188,6 +189,15 @@ def load_knockout_skeleton() -> pd.DataFrame:
     """The 32 official placeholder rows: R32 -> R16 -> QF -> SF -> 3rd place -> Final."""
     fixtures = pd.read_csv(RAW_DIR / "wc_2026_fixtures_enriched.csv")
     return fixtures[fixtures["is_placeholder_match"] == True].reset_index(drop=True)  # noqa: E712
+
+
+@lru_cache(maxsize=1)
+def load_knockout_matches() -> pd.DataFrame:
+    """Resolved knockout fixtures produced by the pipeline, when available."""
+    path = RAW_DIR / "knockout_matches.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
 
 
 @lru_cache(maxsize=1)

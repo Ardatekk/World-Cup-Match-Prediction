@@ -14,11 +14,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
+from pathlib import Path
 
 import pandas as pd
 
 import realdata as rd
 import simulate as sim
+
+PROCESSED_DIR = Path(__file__).resolve().parent.parent / "data" / "processed"
 
 
 @dataclass(frozen=True)
@@ -117,8 +120,29 @@ def get_round_reach() -> pd.DataFrame:
     return df.sort_values("tournament_win_probability", ascending=False).reset_index(drop=True)
 
 
+@lru_cache(maxsize=1)
+def get_knockout_matches() -> pd.DataFrame:
+    return rd.load_knockout_matches()
+
+
 def get_tournament_winner_probs(top_n: int = 10) -> pd.DataFrame:
     return get_round_reach().head(top_n)
+
+
+@lru_cache(maxsize=1)
+def get_player_profiles() -> pd.DataFrame:
+    path = PROCESSED_DIR / "player_profiles.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
+
+
+@lru_cache(maxsize=1)
+def get_player_stats() -> pd.DataFrame:
+    path = PROCESSED_DIR / "player_stats.csv"
+    if not path.exists():
+        return pd.DataFrame()
+    return pd.read_csv(path)
 
 
 def db_available() -> bool:

@@ -12,9 +12,25 @@ Page set and ordering follow the Data Analytics handoff doc:
 Run with:  streamlit run dashboard/app.py
 """
 
+import base64
+from pathlib import Path
+import sys
+
 import streamlit as st
 
-from data import get_teams, get_team, get_matches, get_group_standings, get_round_reach
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from data import (
+    get_teams,
+    get_team,
+    get_matches,
+    get_group_standings,
+    get_knockout_matches,
+    get_round_reach,
+    get_player_stats,
+)
 from components import (
     inject_css,
     kpi_card,
@@ -26,10 +42,76 @@ from components import (
     group_stage_panel,
     knockout_bracket_panel,
     team_stats_dashboard,
+    fifa_overview_dashboard,
 )
+from src.predict import predict_match
 
 st.set_page_config(page_title="World Cup 2026 Predictions", layout="wide", page_icon="⚽")
 inject_css()
+
+ASSET_DIR = Path(__file__).resolve().parent.parent / "assets"
+TITLE_IMAGE_PATH = ASSET_DIR / "WC_trophy_transparent.png"
+
+
+@st.cache_data(show_spinner=False)
+def _title_image_src() -> str:
+    if not TITLE_IMAGE_PATH.exists():
+        return ""
+    encoded = base64.b64encode(TITLE_IMAGE_PATH.read_bytes()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
+
+
+def page_header(title: str, subtitle: str) -> None:
+    image_src = _title_image_src()
+    image_html = f'<img class="wc-page-emblem" src="{image_src}" alt="World Cup trophy">' if image_src else ""
+    st.markdown(
+        f"""<div class="wc-page-header">
+            {image_html}
+            <div class="wc-page-header-text">
+                <div class="wc-page-title">{title}</div>
+                <div class="wc-page-subtitle">{subtitle}</div>
+            </div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+
+
+def _next_resolved_knockout_match(knockout_matches):
+    if knockout_matches is None or knockout_matches.empty:
+        return None
+    required = {"home_team", "away_team", "is_resolved", "date", "kickoff_time"}
+    if not required.issubset(set(knockout_matches.columns)):
+        return None
+
+    upcoming = knockout_matches[
+        knockout_matches["is_resolved"].astype(bool)
+        & knockout_matches["home_team"].notna()
+        & knockout_matches["away_team"].notna()
+        & ~knockout_matches["status"].astype(str).str.upper().eq("FINISHED")
+    ].copy()
+    if upcoming.empty:
+        return None
+
+    upcoming = upcoming.sort_values(["date", "kickoff_time", "match_id"], na_position="last")
+    row = upcoming.iloc[0]
+    home = str(row["home_team"])
+    away = str(row["away_team"])
+    try:
+        prediction = predict_match(home, away)
+    except Exception:
+        prediction = {"home_win": 1 / 3, "draw": 1 / 3, "away_win": 1 / 3}
+
+    return {
+        "home_team": home,
+        "away_team": away,
+        "date": row.get("date"),
+        "kickoff_time": row.get("kickoff_time"),
+        "stage": row.get("stage", "Knockout"),
+        "home_win_probability": prediction["home_win"],
+        "draw_probability": prediction["draw"],
+        "away_win_probability": prediction["away_win"],
+    }
+
 
 PAGES = ["Overview", "Match Details", "Groups", "Knockout Bracket", "Teams", "About"]
 
@@ -47,92 +129,16 @@ def page_overview():
     st.markdown('<div class="wc-top-spacer"></div>', unsafe_allow_html=True)
     matches = get_matches()
     teams = get_teams()
-    teams_by_name = {t.name: t for t in teams}
     round_reach = get_round_reach()
-    confederations = sorted({t.confederation for t in teams})
-
-    title_col, stage_col, confed_col, reset_col = st.columns([2.2, 0.85, 0.95, 0.65])
-    with title_col:
-        st.markdown(
-            """<div class="wc-page-title">Tournament Overview</div>
-            <div class="wc-page-subtitle">AI predictions for FIFA World Cup 2026</div>""",
-            unsafe_allow_html=True,
-        )
-    with stage_col:
-        stage_filter = st.selectbox("Stage", ["All", "Group Stage"], key="overview_stage", label_visibility="visible")
-    with confed_col:
-        confed_filter = st.selectbox("Confederation", ["All"] + confederations, key="overview_confed", label_visibility="visible")
-    with reset_col:
-        st.write("")
-        if st.button("Reset Filters", use_container_width=True):
-            st.session_state["overview_stage"] = "All"
-            st.session_state["overview_confed"] = "All"
-            st.rerun()
-
-    visible_matches = matches.copy()
-    visible_teams = teams
-    if confed_filter != "All":
-        team_names = {t.name for t in teams if t.confederation == confed_filter}
-        visible_matches = visible_matches[
-            visible_matches.home_team.isin(team_names) | visible_matches.away_team.isin(team_names)
-        ]
-        visible_teams = [t for t in teams if t.name in team_names]
-
-    upcoming = visible_matches[~visible_matches["played"]]
-    latest_results = visible_matches[visible_matches["played"]].sort_values(
-        ["match_date", "kickoff_time_utc"], ascending=[False, False]
-    ).head(5)
-
-    if not upcoming.empty:
-        biggest_fav = upcoming.loc[upcoming[["home_win_probability", "away_win_probability"]].max(axis=1).idxmax()]
-        fav_team, fav_prob, fav_opp = (
-            (biggest_fav.home_team, biggest_fav.home_win_probability, biggest_fav.away_team)
-            if biggest_fav.home_win_probability > biggest_fav.away_win_probability
-            else (biggest_fav.away_team, biggest_fav.away_win_probability, biggest_fav.home_team)
-        )
-        biggest_upset = upcoming.loc[upcoming.upset_risk_score.idxmax()]
-        avg_confidence = (1 - upcoming.upset_risk_score).mean() * 100
-    else:
-        fav_team, fav_prob, fav_opp = "n/a", 0, "n/a"
-        biggest_upset = None
-        avg_confidence = 0
-
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        kpi_card("Total matches", f"{len(visible_matches)}",
-                 f"{int(visible_matches['played'].sum())} finished", icon="□")
-    with c2:
-        kpi_card("Avg. model confidence", f"{avg_confidence:.0f}%",
-                 "Average prediction confidence", accent="green", icon="↗")
-    with c3:
-        kpi_card("Highest win probability", f"{fav_prob*100:.0f}%",
-                 f"{fav_team} vs {fav_opp}", accent="purple", icon="◎")
-    with c4:
-        upset_match = f"{biggest_upset.home_team} vs {biggest_upset.away_team}" if biggest_upset is not None else "n/a"
-        upset_sub = f"risk score {biggest_upset.upset_risk_score:.2f}" if biggest_upset is not None else "no upcoming matches"
-        upset_value = f"{biggest_upset.upset_risk_score*100:.0f}%" if biggest_upset is not None else "n/a"
-        kpi_card("Biggest upset risk", upset_value, f"{upset_match} | {upset_sub}", accent="gold", icon="!")
-
-    left, mid, right = st.columns([1.1, 1.35, 1.75])
-    with left:
-        top_teams_panel(visible_teams)
-    with mid:
-        qualification_panel(round_reach, top_n=8)
-    with right:
-        upcoming_compact = upcoming.sort_values(["match_date", "kickoff_time_utc"]).head(5)
-        compact_matches_panel(
-            upcoming_compact,
-            "Upcoming matches",
-            "No upcoming matches are available.",
-            teams_by_name=teams_by_name,
-        )
-
-    st.markdown("")
-    compact_matches_panel(
-        latest_results,
-        "Latest results",
-        "No finished matches are available yet.",
-        teams_by_name=teams_by_name,
+    player_stats = get_player_stats()
+    knockout_matches = get_knockout_matches()
+    fifa_overview_dashboard(
+        matches=matches,
+        teams=teams,
+        round_reach=round_reach,
+        player_stats=player_stats,
+        next_match=_next_resolved_knockout_match(knockout_matches),
+        trophy_src=_title_image_src(),
     )
 
 
@@ -142,11 +148,7 @@ def page_match_details():
     matches = get_matches()
     teams_list = sorted(set(matches.home_team) | set(matches.away_team))
 
-    st.markdown(
-        """<div class="wc-page-title">Match Detail Page</div>
-        <div class="wc-page-subtitle">Prediction breakdown, live status, and match context</div>""",
-        unsafe_allow_html=True,
-    )
+    page_header("Match Detail Page", "Prediction breakdown, live status, and match context")
 
     c1, c2, c3 = st.columns([0.9, 1.1, 2.4])
     with c1:
@@ -189,11 +191,7 @@ def page_groups():
     groups = sorted(standings.group.unique())
     header_col, select_col = st.columns([2.4, 1])
     with header_col:
-        st.markdown(
-            """<div class="wc-page-title">Group Stage Page</div>
-            <div class="wc-page-subtitle">Current standings, qualification probability, and next fixtures</div>""",
-            unsafe_allow_html=True,
-        )
+        page_header("Group Stage Page", "Current standings, qualification probability, and next fixtures")
     with select_col:
         group_choice = st.selectbox("Select group", groups)
 
@@ -205,15 +203,12 @@ def page_bracket():
     st.markdown('<div class="wc-top-spacer"></div>', unsafe_allow_html=True)
     standings = get_group_standings()
     round_reach = get_round_reach()
+    knockout_matches = get_knockout_matches()
     teams = get_teams()
     teams_by_name = {t.name: t for t in teams}
 
-    st.markdown(
-        """<div class="wc-page-title">Knockout Bracket Page</div>
-        <div class="wc-page-subtitle">Projected bracket from live standings and tournament simulations</div>""",
-        unsafe_allow_html=True,
-    )
-    knockout_bracket_panel(standings, round_reach, teams_by_name)
+    page_header("Knockout Bracket Page", "Resolved fixtures when available, with projected progression from simulations")
+    knockout_bracket_panel(standings, round_reach, teams_by_name, knockout_matches=knockout_matches)
 
 
 # ------------------------------------------------------------------- Teams
@@ -223,23 +218,28 @@ def page_teams():
     names = [t.name for t in sorted(teams, key=lambda t: (-t.elo, t.name))]
     header_col, select_col = st.columns([2.35, 1])
     with header_col:
-        st.markdown(
-            """<div class="wc-page-title">Team Elo Rankings</div>
-            <div class="wc-page-subtitle">Search countries, compare Elo strength, and inspect tournament context</div>""",
-            unsafe_allow_html=True,
-        )
+        page_header("Team Elo Rankings", "Search countries, compare Elo strength, and inspect tournament context")
     with select_col:
         choice = st.selectbox("Search country", names)
     team = get_team(choice)
     round_reach = get_round_reach()
     standings = get_group_standings()
     matches = get_matches()
-    team_stats_dashboard(teams, standings, round_reach, matches=matches, selected_team=team.name)
+    player_stats = get_player_stats()
+    team_stats_dashboard(
+        teams,
+        standings,
+        round_reach,
+        matches=matches,
+        player_stats=player_stats,
+        selected_team=team.name,
+    )
 
 
 # ------------------------------------------------------------------- About
 def page_about():
-    st.title("About this dashboard")
+    st.markdown('<div class="wc-top-spacer"></div>', unsafe_allow_html=True)
+    page_header("About This Dashboard", "Project context, data sources, and model scope")
     matches = get_matches()
     st.markdown(f"""
 This dashboard is built around **football questions, not datasets** —
