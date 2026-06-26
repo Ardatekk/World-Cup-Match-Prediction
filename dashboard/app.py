@@ -13,11 +13,20 @@ Run with:  streamlit run dashboard/app.py
 """
 
 import streamlit as st
-import pandas as pd
 
-from data import get_teams, get_team, get_matches, get_group_standings, get_round_reach, db_available
-from components import inject_css, kpi_card, match_card, confidence_pill
-from bracket import build_funnel_svg
+from data import get_teams, get_team, get_matches, get_group_standings, get_round_reach
+from components import (
+    inject_css,
+    kpi_card,
+    match_card,
+    top_teams_panel,
+    qualification_panel,
+    compact_matches_panel,
+    match_detail_panel,
+    group_stage_panel,
+    knockout_bracket_panel,
+    team_stats_dashboard,
+)
 
 st.set_page_config(page_title="World Cup 2026 Predictions", layout="wide", page_icon="⚽")
 inject_css()
@@ -35,60 +44,111 @@ with st.sidebar:
 
 # ---------------------------------------------------------------- Overview
 def page_overview():
-    st.title("Tournament Overview")
+    st.markdown('<div class="wc-top-spacer"></div>', unsafe_allow_html=True)
     matches = get_matches()
-    upcoming = matches[~matches["played"]]
     teams = get_teams()
+    teams_by_name = {t.name: t for t in teams}
     round_reach = get_round_reach()
+    confederations = sorted({t.confederation for t in teams})
 
-    biggest_fav = upcoming.loc[upcoming[["home_win_probability", "away_win_probability"]].max(axis=1).idxmax()]
-    fav_team, fav_prob, fav_opp = (
-        (biggest_fav.home_team, biggest_fav.home_win_probability, biggest_fav.away_team)
-        if biggest_fav.home_win_probability > biggest_fav.away_win_probability
-        else (biggest_fav.away_team, biggest_fav.away_win_probability, biggest_fav.home_team)
-    )
-    biggest_upset = upcoming.loc[upcoming.upset_risk_score.idxmax()]
-    avg_confidence = (1 - upcoming.upset_risk_score).mean() * 100
-    tournament_fav = round_reach.iloc[0]
+    title_col, stage_col, confed_col, reset_col = st.columns([2.2, 0.85, 0.95, 0.65])
+    with title_col:
+        st.markdown(
+            """<div class="wc-page-title">Tournament Overview</div>
+            <div class="wc-page-subtitle">AI predictions for FIFA World Cup 2026</div>""",
+            unsafe_allow_html=True,
+        )
+    with stage_col:
+        stage_filter = st.selectbox("Stage", ["All", "Group Stage"], key="overview_stage", label_visibility="visible")
+    with confed_col:
+        confed_filter = st.selectbox("Confederation", ["All"] + confederations, key="overview_confed", label_visibility="visible")
+    with reset_col:
+        st.write("")
+        if st.button("Reset Filters", use_container_width=True):
+            st.session_state["overview_stage"] = "All"
+            st.session_state["overview_confed"] = "All"
+            st.rerun()
+
+    visible_matches = matches.copy()
+    visible_teams = teams
+    if confed_filter != "All":
+        team_names = {t.name for t in teams if t.confederation == confed_filter}
+        visible_matches = visible_matches[
+            visible_matches.home_team.isin(team_names) | visible_matches.away_team.isin(team_names)
+        ]
+        visible_teams = [t for t in teams if t.name in team_names]
+
+    upcoming = visible_matches[~visible_matches["played"]]
+    latest_results = visible_matches[visible_matches["played"]].sort_values(
+        ["match_date", "kickoff_time_utc"], ascending=[False, False]
+    ).head(5)
+
+    if not upcoming.empty:
+        biggest_fav = upcoming.loc[upcoming[["home_win_probability", "away_win_probability"]].max(axis=1).idxmax()]
+        fav_team, fav_prob, fav_opp = (
+            (biggest_fav.home_team, biggest_fav.home_win_probability, biggest_fav.away_team)
+            if biggest_fav.home_win_probability > biggest_fav.away_win_probability
+            else (biggest_fav.away_team, biggest_fav.away_win_probability, biggest_fav.home_team)
+        )
+        biggest_upset = upcoming.loc[upcoming.upset_risk_score.idxmax()]
+        avg_confidence = (1 - upcoming.upset_risk_score).mean() * 100
+    else:
+        fav_team, fav_prob, fav_opp = "n/a", 0, "n/a"
+        biggest_upset = None
+        avg_confidence = 0
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        kpi_card("Group matches played", f"{int(matches['played'].sum())}/{len(matches)}",
-                  f"{len(teams)} teams, 12 groups")
+        kpi_card("Total matches", f"{len(visible_matches)}",
+                 f"{int(visible_matches['played'].sum())} finished", icon="□")
     with c2:
-        kpi_card("Highest win probability", f"{fav_team} {fav_prob*100:.0f}%", f"vs {fav_opp}")
+        kpi_card("Avg. model confidence", f"{avg_confidence:.0f}%",
+                 "Average prediction confidence", accent="green", icon="↗")
     with c3:
-        kpi_card("Biggest upset risk", f"{biggest_upset.home_team} vs {biggest_upset.away_team}",
-                  f"risk score {biggest_upset.upset_risk_score:.2f}")
+        kpi_card("Highest win probability", f"{fav_prob*100:.0f}%",
+                 f"{fav_team} vs {fav_opp}", accent="purple", icon="◎")
     with c4:
-        kpi_card("Average model confidence", f"{avg_confidence:.0f}%", "across remaining group matches")
+        upset_match = f"{biggest_upset.home_team} vs {biggest_upset.away_team}" if biggest_upset is not None else "n/a"
+        upset_sub = f"risk score {biggest_upset.upset_risk_score:.2f}" if biggest_upset is not None else "no upcoming matches"
+        upset_value = f"{biggest_upset.upset_risk_score*100:.0f}%" if biggest_upset is not None else "n/a"
+        kpi_card("Biggest upset risk", upset_value, f"{upset_match} | {upset_sub}", accent="gold", icon="!")
 
-    st.markdown("### Tournament favorites (Monte Carlo simulation)")
-    cols = st.columns(5)
-    for i, (_, row) in enumerate(round_reach.head(5).iterrows()):
-        with cols[i]:
-            kpi_card(f"{row.flag} {row.team}", f"{row.tournament_win_probability*100:.1f}%", "win probability")
+    left, mid, right = st.columns([1.1, 1.35, 1.75])
+    with left:
+        top_teams_panel(visible_teams)
+    with mid:
+        qualification_panel(round_reach, top_n=8)
+    with right:
+        upcoming_compact = upcoming.sort_values(["match_date", "kickoff_time_utc"]).head(5)
+        compact_matches_panel(
+            upcoming_compact,
+            "Upcoming matches",
+            "No upcoming matches are available.",
+            teams_by_name=teams_by_name,
+        )
 
-    st.markdown("### Top 10 strongest teams (Elo)")
-    top10 = sorted(teams, key=lambda t: -t.elo)[:10]
-    df = pd.DataFrame([{"Rank": i + 1, "Flag": t.flag, "Team": t.name, "Elo": t.elo} for i, t in enumerate(top10)])
-    st.dataframe(df, hide_index=True, width='stretch',
-                 column_config={"Elo": st.column_config.ProgressColumn(
-                     "Elo", min_value=int(df.Elo.min()) - 20, max_value=int(df.Elo.max()) + 20)})
-
-    st.markdown("### Upcoming matches")
-    for _, m in upcoming.head(5).iterrows():
-        t1, t2 = get_team(m.home_team), get_team(m.away_team)
-        match_card(m, t1, t2)
+    st.markdown("")
+    compact_matches_panel(
+        latest_results,
+        "Latest results",
+        "No finished matches are available yet.",
+        teams_by_name=teams_by_name,
+    )
 
 
 # ---------------------------------------------------------- Match Details
 def page_match_details():
-    st.title("Match Prediction Center")
+    st.markdown('<div class="wc-top-spacer"></div>', unsafe_allow_html=True)
     matches = get_matches()
     teams_list = sorted(set(matches.home_team) | set(matches.away_team))
 
-    c1, c2 = st.columns(2)
+    st.markdown(
+        """<div class="wc-page-title">Match Detail Page</div>
+        <div class="wc-page-subtitle">Prediction breakdown, live status, and match context</div>""",
+        unsafe_allow_html=True,
+    )
+
+    c1, c2, c3 = st.columns([0.9, 1.1, 2.4])
     with c1:
         group_filter = st.selectbox("Group", ["All"] + sorted(matches.group.unique()))
     with c2:
@@ -100,119 +160,81 @@ def page_match_details():
     if team_filter != "All":
         filtered = filtered[(filtered.home_team == team_filter) | (filtered.away_team == team_filter)]
 
-    st.caption(f"{len(filtered)} match(es)")
-    for _, m in filtered.iterrows():
-        t1, t2 = get_team(m.home_team), get_team(m.away_team)
-        with st.container():
-            match_card(m, t1, t2)
-            if not m["played"]:
-                with st.expander("Key factors"):
-                    st.write(f"- **Elo difference:** {m.elo_difference:+.0f} ({t1.name} perspective)")
-                    st.write(f"- **Model:** XGBoost classifier (win/draw/loss probabilities)")
-                    st.write(f"- **Group:** {m.group}  |  **Venue:** {m.venue}, {m.city}  |  **Date:** {m.date}")
-            st.markdown("")
+    filtered = filtered.sort_values(["match_date", "kickoff_time_utc"]).reset_index(drop=True)
+    if filtered.empty:
+        st.info("No matches found for the selected filters.")
+        return
+
+    match_options = [
+        f"{row.match_date} | Group {row.group} | {row.home_team} vs {row.away_team}"
+        for _, row in filtered.iterrows()
+    ]
+    with c3:
+        selected_label = st.selectbox("Match", match_options)
+
+    selected_idx = match_options.index(selected_label)
+    m = filtered.iloc[selected_idx]
+    t1, t2 = get_team(m.home_team), get_team(m.away_team)
+    focus_team = team_filter if team_filter != "All" else None
+    match_detail_panel(m, t1, t2, focus_team=focus_team)
 
 
 # ----------------------------------------------------------------- Groups
 def page_groups():
-    st.title("Group Stage Analysis")
+    st.markdown('<div class="wc-top-spacer"></div>', unsafe_allow_html=True)
     standings = get_group_standings()
+    matches = get_matches()
+    teams = get_teams()
+    teams_by_name = {t.name: t for t in teams}
     groups = sorted(standings.group.unique())
-    group_choice = st.selectbox("Select group", groups)
-
-    g = standings[standings.group == group_choice].sort_values(
-        ["points", "goal_difference"], ascending=[False, False])
-    st.markdown(f"### Group {group_choice} — current standings")
-    st.caption("Points reflect matches actually played so far. Qualification % comes from "
-               "the Monte Carlo simulation of remaining fixtures.")
-
-    for _, row in g.iterrows():
-        c1, c2, c3, c4 = st.columns([3, 2, 2, 2])
-        with c1:
-            st.markdown(f"**{row.flag} {row.team}**")
-        with c2:
-            st.markdown(f"Pts: **{int(row.points)}** ({int(row.played)} played)")
-        with c3:
-            st.markdown(f"GD: **{int(row.goal_difference):+d}**")
-        with c4:
-            st.progress(min(1.0, row.group_qualification_probability),
-                        text=f"Qualify: {row.group_qualification_probability*100:.0f}%")
-
-    with st.expander("Full table (goals for / against)"):
-        st.dataframe(
-            g[["team", "played", "points", "goals_for", "goals_against", "goal_difference",
-               "group_qualification_probability"]].rename(columns={
-                "team": "Team", "played": "Played", "points": "Pts", "goals_for": "GF",
-                "goals_against": "GA", "goal_difference": "GD",
-                "group_qualification_probability": "Qual. Prob.",
-            }),
-            hide_index=True, width='stretch',
+    header_col, select_col = st.columns([2.4, 1])
+    with header_col:
+        st.markdown(
+            """<div class="wc-page-title">Group Stage Page</div>
+            <div class="wc-page-subtitle">Current standings, qualification probability, and next fixtures</div>""",
+            unsafe_allow_html=True,
         )
+    with select_col:
+        group_choice = st.selectbox("Select group", groups)
+
+    group_stage_panel(group_choice, standings, matches, teams_by_name)
 
 
 # --------------------------------------------------------- Knockout Bracket
 def page_bracket():
-    st.title("Knockout Bracket — Road to the Final")
-    st.caption("Funnel view of round-reach probabilities for the top contenders. "
-               "Replace with the real single-elimination bracket once group results are final.")
+    st.markdown('<div class="wc-top-spacer"></div>', unsafe_allow_html=True)
+    standings = get_group_standings()
     round_reach = get_round_reach()
-    top_n = st.slider("Show top N teams", 4, 16, 8)
-    svg = build_funnel_svg(round_reach, top_n=top_n)
-    st.markdown(f'<div style="color:#1a1a1a; background:#fafafa; border-radius:12px; padding:8px;">{svg}</div>',
-                unsafe_allow_html=True)
+    teams = get_teams()
+    teams_by_name = {t.name: t for t in teams}
 
-    st.markdown("### Tournament winner probability")
-    winner_df = round_reach.head(10)[["flag", "team", "tournament_win_probability"]]
-    winner_df = winner_df.rename(columns={"flag": "", "team": "Team", "tournament_win_probability": "Win %"})
-    winner_df["Win %"] = (winner_df["Win %"] * 100).round(1)
-    st.dataframe(winner_df, hide_index=True, width='stretch',
-                 column_config={"Win %": st.column_config.ProgressColumn("Win %", min_value=0, max_value=float(winner_df["Win %"].max()))})
+    st.markdown(
+        """<div class="wc-page-title">Knockout Bracket Page</div>
+        <div class="wc-page-subtitle">Projected bracket from live standings and tournament simulations</div>""",
+        unsafe_allow_html=True,
+    )
+    knockout_bracket_panel(standings, round_reach, teams_by_name)
 
 
 # ------------------------------------------------------------------- Teams
 def page_teams():
-    st.title("Team Explorer")
+    st.markdown('<div class="wc-top-spacer"></div>', unsafe_allow_html=True)
     teams = get_teams()
-    names = sorted(t.name for t in teams)
-    choice = st.selectbox("Select a country", names)
+    names = [t.name for t in sorted(teams, key=lambda t: (-t.elo, t.name))]
+    header_col, select_col = st.columns([2.35, 1])
+    with header_col:
+        st.markdown(
+            """<div class="wc-page-title">Team Elo Rankings</div>
+            <div class="wc-page-subtitle">Search countries, compare Elo strength, and inspect tournament context</div>""",
+            unsafe_allow_html=True,
+        )
+    with select_col:
+        choice = st.selectbox("Search country", names)
     team = get_team(choice)
-    round_reach = get_round_reach().set_index("team")
-    standings = get_group_standings().set_index("team")
-
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        kpi_card(f"{team.flag} {team.name}", f"Elo {team.elo}", f"FIFA rank #{team.fifa_rank}")
-    with c2:
-        kpi_card("Group", team.group, f"Confederation: {team.confederation}")
-    with c3:
-        kpi_card("This World Cup so far", f"{team.campaign_w}W {team.campaign_d}D {team.campaign_l}L",
-                  f"{team.campaign_played} played, GF {team.campaign_gf} / GA {team.campaign_ga}")
-    with c4:
-        win_p = round_reach.loc[team.name, "tournament_win_probability"] * 100
-        kpi_card("Tournament win probability", f"{win_p:.1f}%", "from Monte Carlo simulation")
-
-    st.markdown(f"**Recent form before the tournament (last 5):** {' '.join(team.recent_form) or 'n/a'} "
-                f"(GF {team.goals_for_l5} / GA {team.goals_against_l5})")
-    if team.coach:
-        st.caption(f"Coach: {team.coach}")
-
-    st.markdown("### Group-stage fixtures")
+    round_reach = get_round_reach()
+    standings = get_group_standings()
     matches = get_matches()
-    team_matches = matches[(matches.home_team == team.name) | (matches.away_team == team.name)]
-    for _, m in team_matches.iterrows():
-        t1, t2 = get_team(m.home_team), get_team(m.away_team)
-        match_card(m, t1, t2)
-
-    st.markdown("### Qualification & progression")
-    qual = standings.loc[team.name, "group_qualification_probability"] * 100
-    rr = round_reach.loc[team.name]
-    st.progress(min(1.0, qual / 100), text=f"Group qualification: {qual:.0f}%")
-    cols = st.columns(5)
-    rounds = [("Round of 16", "round_of_16"), ("Quarterfinal", "quarterfinal"),
-              ("Semifinal", "semifinal"), ("Final", "final"), ("Winner", "tournament_win_probability")]
-    for col, (label, key) in zip(cols, rounds):
-        with col:
-            st.metric(label, f"{rr[key]*100:.1f}%")
+    team_stats_dashboard(teams, standings, round_reach, matches=matches, selected_team=team.name)
 
 
 # ------------------------------------------------------------------- About

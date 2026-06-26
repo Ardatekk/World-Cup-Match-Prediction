@@ -7,10 +7,8 @@ from pathlib import Path
 
 from airflow import DAG
 
-try:
-    from airflow.providers.standard.operators.python import PythonOperator
-except ImportError:
-    from airflow.operators.python import PythonOperator
+from airflow.providers.standard.operators.python import PythonOperator
+
 
 BASE_DIR = Path(
     os.environ.get(
