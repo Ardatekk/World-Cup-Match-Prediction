@@ -4,15 +4,9 @@
 [![Python](https://img.shields.io/badge/python-3.12-blue)](#)
 [![BeCode](https://img.shields.io/badge/BeCode-team%20project-black)](#)
 
-# FIFA World Cup 2026 Match Prediction
-
-[![Project Status](https://img.shields.io/badge/status-portfolio%20v1.0-green)](#)
-[![Python](https://img.shields.io/badge/python-3.12-blue)](#)
-[![BeCode](https://img.shields.io/badge/BeCode-team%20project-black)](#)
-
 ## 📺 Dashboard Preview
 
-![Dashboard](Ekran_görüntüsü_2026-06-30_160220.png)
+![Dashboard](Dashboard.png)
 
 
 ⚽ FIFA World Cup 2026 Analytics & Prediction Platform
