@@ -6,7 +6,7 @@
 
 ## 📺 Dashboard Preview
 
-![Dashboard](dashboard.png)
+![Dashboard](Dashboard.png)
 
 ### 🌍 FIFA World Cup 2026 Analytics & Prediction Platform
 
