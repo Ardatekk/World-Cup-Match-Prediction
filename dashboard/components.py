@@ -1894,7 +1894,7 @@ h1, h2, h3 {
 }
 .wc-ta-match-line {
     display: grid;
-    grid-template-columns: 1fr 56px 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(56px, auto) minmax(0, 1fr);
     align-items: center;
     gap: 8px;
     color: #ffffff;
@@ -1918,6 +1918,7 @@ h1, h2, h3 {
     font-size: 1rem;
     font-weight: 900;
     white-space: nowrap;
+    padding: 0 4px;
 }
 .wc-team-impact-row {
     display: grid;
@@ -2759,7 +2760,8 @@ def match_detail_panel(match_row, team1, team2, focus_team: str | None = None, c
     group = escape(str(match_row.get("group", "") or ""))
     status_raw = str(match_row.get("status", "SCHEDULED") or "SCHEDULED").replace("_", " ")
     status = escape(status_raw.title())
-    score = escape(str(match_row.get("score_display", "TBD") or "TBD"))
+    raw_score = str(match_row.get("score_display", "TBD") or "TBD")
+    score = escape(raw_score)
     stage = str(match_row.get("competition_stage", "") or "").strip()
     title = escape(stage) if stage else f"Group {group}"
     meta_bits = [match_date]
@@ -2777,14 +2779,16 @@ def match_detail_panel(match_row, team1, team2, focus_team: str | None = None, c
     stronger = team1.name if elo_diff >= 0 else team2.name
     predicted_home, predicted_away = _projected_score(home_pct, draw_pct, away_pct)
 
-    if has_score and score != "TBD" and "-" in score:
-        projected_home, projected_away = score.replace(" ", "").split("-", 1)
+    actual_home = pd.to_numeric(match_row.get("home_goals", match_row.get("home_score")), errors="coerce")
+    actual_away = pd.to_numeric(match_row.get("away_goals", match_row.get("away_score")), errors="coerce")
+    actual_score_available = (
+        (has_score or played)
+        and pd.notna(actual_home)
+        and pd.notna(actual_away)
+    )
+    if actual_score_available:
+        actual_score = score if raw_score != "TBD" else f"{int(actual_home)} - {int(actual_away)}"
         score_label = "Final Score" if played else "Live Score"
-        score_sub = status
-        prediction_note = f"Model prediction: {predicted_home} - {predicted_away}"
-    elif played and score != "TBD" and "-" in score:
-        projected_home, projected_away = score.replace(" ", "").split("-", 1)
-        score_label = "Final Score"
         score_sub = status
         prediction_note = f"Model prediction: {predicted_home} - {predicted_away}"
     else:
@@ -2793,12 +2797,12 @@ def match_detail_panel(match_row, team1, team2, focus_team: str | None = None, c
         score_sub = team1.name if projected_home > projected_away else team2.name if projected_away > projected_home else "Draw"
         prediction_note = "Model-derived score proxy"
 
-    if has_score or played:
+    if actual_score_available:
         score_feature = f"""
             <div class="wc-score-comparison">
                 <div>
                     <div class="wc-score-comparison-label">{score_label}</div>
-                    <div class="wc-score-big">{projected_home} - {projected_away}</div>
+                    <div class="wc-score-big">{actual_score}</div>
                     <div class="wc-score-sub">{escape(str(score_sub))}</div>
                 </div>
                 <div>
